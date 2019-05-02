@@ -72,7 +72,6 @@ class CCICalculate(object):
     def get_cci(self):
         return (self.get_tpi(0) - self.get_ma()) / (0.015 * self.get_md())
     
-
 # 分析类
 class CCIAnalyze(object):
 
@@ -90,6 +89,7 @@ class CCIAnalyze(object):
             filename = file_list[index]     # 取出文件名
             self.code = filename[0:6]
             self.analyze_one()
+        self.save_to_txt()
 
     def analyze_one(self):
         try:
@@ -101,14 +101,16 @@ class CCIAnalyze(object):
         # 截取 self.n 行, 默认从第0行开始
         start = 0
 
-        # stock_cci = []
-        # 每 n 行为一个块， 每次进一行
+        stock_cci = []
+        
         col = {
             'date': [],
             'code': [],
             'CCI': [],
             'close': []
         }
+
+        # 每 n 行为一个块， 每次进一行
         while True:
             # 截取 start ~ start + n
             rows = df[start:start+self.n]
@@ -127,38 +129,56 @@ class CCIAnalyze(object):
             if flag:
                 cci_calculate = CCICalculate(datas)
                 cci = cci_calculate.get_cci()
-                # stock_cci.append({'date':rows.iloc[0]['日期'], 'cci': cci})
             else:
                 cci = 0
             col['CCI'].append(cci)
             col['date'].append(rows.values[0][0])
             col['code'].append(self.code)
             col['close'].append(rows.values[0][3])
+            stock_cci.append({'date':rows.iloc[0]['日期'], 'cci': cci, 'close': rows.iloc[0]['收盘价']})
             start += 1
 
+
+        self.all_cci[str(self.code)] = stock_cci
         df_new_col = DataFrame(col, columns=['date','code','CCI','close'])
-        print(df_new_col)
-        df_new_col.to_csv(self.cci_path_prefix + str(self.code) + '.csv', mode='w', index=False)
+        df_new_col.to_csv(self.cci_path_prefix + str(self.code) + '.csv', mode='w', index=False)    # 存储至csv
     
+    def save_to_txt(self):
+        file_handle=open('cci.txt',mode='w', encoding="utf-8")
+        file_handle.write(str(self.all_cci))
+
     def test_buy(self):
         print("正在测试购买")
-        for index in tqdm(range(len(self.all_cci))):
-            stock_cci = self.all_cci[index]     
-            code = stock_cci['code']
-            ccis = stock_cci['ccis'][::-1]
-            for cci in ccis:
-                pass
+        file_list = os.listdir(self.cci_path_prefix)
+        for index in tqdm(range(len(file_list))):
+            filename = file_list[index]     # 取出文件名
+            code = filename[0:6]
+            try:
+                df = pd.read_csv(self.cci_path_prefix + filename, encoding='gbk')
+            except:
+                print('文件'+str(code) + '.csv 打开失败')
+                return False
+            rows = df.values[::-1]  # 倒转数组
+            
+            flag = False    # 标记是否已找到 < -100 的， 
+            for row in rows:
+                if not flag:
+                    if row[2] < -100:
+                        pass
+
 
 
 if __name__ == '__main__':
     file_path_prefix = 'F:\\files\\sharesDatas\\kline\\'
     cci_path_prefix = 'F:\\files\\sharesDatas\\cci\\'
     code = '000001'
-    end_date = '2019-01-01'
+    end_date = '2018-01-01'
     cci_analyze = CCIAnalyze(file_path_prefix, cci_path_prefix=cci_path_prefix, end_date=end_date, code=code)
 
-    cci_analyze.analyze_all()
+    # cci_analyze.analyze_all()
     # for cci in ccis['ccis'][::-1]:
     #     print(cci)
     # cci_analyze.analyze_all()
+
+    cci_analyze.test_buy()
     
