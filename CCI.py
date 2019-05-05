@@ -2,7 +2,7 @@ import os
 from tqdm import tqdm
 import pandas as pd
 from pandas import Series, DataFrame
-
+import pymysql
 
 class BuyInfo(object):
 
@@ -103,7 +103,8 @@ class CCIAnalyze(object):
             filename = file_list[index]     # 取出文件名
             self.code = filename[0:6]
             self.analyze_one()
-        self.save_to_txt()
+        # self.save_to_txt()
+        self.save_to_mysql()
 
     def analyze_one(self):
         try:
@@ -111,18 +112,18 @@ class CCIAnalyze(object):
         except:
             print('文件'+str(self.code) + '.csv 打开失败')
             return False
-        
+        df['cci'] = ''
         # 截取 self.n 行, 默认从第0行开始
         start = 0
 
-        stock_cci = []
+        # stock_cci = []
         
-        col = {
-            'date': [],
-            'code': [],
-            'CCI': [],
-            'close': []
-        }
+        # col = {
+        #     'date': [],
+        #     'code': [],
+        #     'CCI': [],
+        #     'close': []
+        # }
 
         # 每 n 行为一个块， 每次进一行
         while True:
@@ -132,7 +133,6 @@ class CCIAnalyze(object):
             if len(rows) < self.n or rows.values[0][0] < self.end_date:
                 break
 
-            # 遍历截取的块 计算typs
             datas = []
             flag = True     # 标记数据是否完整
             for index, row in rows.iterrows():
@@ -145,18 +145,52 @@ class CCIAnalyze(object):
                 cci = cci_calculate.get_cci()
             else:
                 cci = 0
-            col['CCI'].append(cci)
-            col['date'].append(rows.values[0][0])
-            col['code'].append(self.code)
-            col['close'].append(rows.values[0][3])
-            stock_cci.append({'date':rows.iloc[0]['日期'], 'cci': cci, 'close': rows.iloc[0]['收盘价']})
+            # col['CCI'].append(cci)
+            # col['date'].append(rows.values[0][0])
+            # col['code'].append(self.code)
+            # col['close'].append(rows.values[0][3])
+            # 
+            df.loc[start, 'cci'] = cci
+            # stock_cci.append({'date':rows.iloc[0]['日期'], 'cci': cci, 'close': rows.iloc[0]['收盘价']})
             start += 1
+        df.to_csv(self.file_path_prefix + str(self.code) + '.csv', index=False, encoding='gbk')
 
+        # self.all_cci[str(self.code)] = stock_cci
+        # df_new_col = DataFrame(col, columns=['date','code','CCI','close'])
+        # df_new_col.to_csv(self.cci_path_prefix + str(self.code) + '.csv', mode='w', index=False)    # 存储至csv
 
-        self.all_cci[str(self.code)] = stock_cci
-        df_new_col = DataFrame(col, columns=['date','code','CCI','close'])
-        df_new_col.to_csv(self.cci_path_prefix + str(self.code) + '.csv', mode='w', index=False)    # 存储至csv
-         
+    def save_to_mysql(self):
+        # 连接数据库
+        name = "root"
+        passsword = ""
+        db = pymysql.connect('localhost', name, passsword, charset='utf8')
+        cursor = db.cursor()
+        cursor.execute('use shares')
+
+        file_list = os.listdir(self.cci_path_prefix)
+        # 遍历保存的csv文件
+        print('正在储存至mysql')
+        for index in tqdm(range(len(file_list))):
+            filename = file_list[index]     # 取出文件名
+            code = filename[0:6]
+            try:
+                df = pd.read_csv(self.cci_path_prefix + filename, encoding='gbk')
+            except:
+                print('文件'+str(code) + '.csv 打开失败')
+                return False
+            tb_name = "_" + str(code)
+            try:
+                cursor.execute("alter table %s add `cci` varchar(20)" % tb_name)
+            except:
+                pass
+            rows = df.values[:]
+            for row in rows:
+                try:
+                    sqltxt = "UPDATE %s SET `cci` = %s WHERE `日期` = '%s'" % (tb_name, row[2], row[0])
+                    cursor.execute(sqltxt)
+                except:
+                    pass
+
     def save_to_txt(self):
         file_handle=open('cci.txt',mode='w', encoding="utf-8")
         file_handle.write(str(self.all_cci))
@@ -275,10 +309,10 @@ if __name__ == '__main__':
     end_date = '2017-01-01'
     cci_analyze = CCIAnalyze(file_path_prefix, cci_path_prefix=cci_path_prefix, end_date=end_date, code=code)
 
-    # cci_analyze.analyze_all()
+    cci_analyze.analyze_all()
     # for cci in ccis['ccis'][::-1]:
     #     print(cci)
     # cci_analyze.analyze_all()
-
-    cci_analyze.test_buy_2()
+    # cci_analyze.save_to_mysql()
+    # cci_analyze.test_buy_2()
     
