@@ -104,7 +104,7 @@ class CCIAnalyze(object):
             self.code = filename[0:6]
             self.analyze_one()
         # self.save_to_txt()
-        self.save_to_mysql()
+        # self.save_to_mysql()
 
     def analyze_one(self):
         try:
@@ -115,15 +115,6 @@ class CCIAnalyze(object):
         df['cci'] = ''
         # 截取 self.n 行, 默认从第0行开始
         start = 0
-
-        # stock_cci = []
-        
-        # col = {
-        #     'date': [],
-        #     'code': [],
-        #     'CCI': [],
-        #     'close': []
-        # }
 
         # 每 n 行为一个块， 每次进一行
         while True:
@@ -145,19 +136,10 @@ class CCIAnalyze(object):
                 cci = cci_calculate.get_cci()
             else:
                 cci = 0
-            # col['CCI'].append(cci)
-            # col['date'].append(rows.values[0][0])
-            # col['code'].append(self.code)
-            # col['close'].append(rows.values[0][3])
-            # 
             df.loc[start, 'cci'] = cci
-            # stock_cci.append({'date':rows.iloc[0]['日期'], 'cci': cci, 'close': rows.iloc[0]['收盘价']})
             start += 1
         df.to_csv(self.file_path_prefix + str(self.code) + '.csv', index=False, encoding='gbk')
 
-        # self.all_cci[str(self.code)] = stock_cci
-        # df_new_col = DataFrame(col, columns=['date','code','CCI','close'])
-        # df_new_col.to_csv(self.cci_path_prefix + str(self.code) + '.csv', mode='w', index=False)    # 存储至csv
 
     def save_to_mysql(self):
         # 连接数据库
