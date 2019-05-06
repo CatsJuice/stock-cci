@@ -88,9 +88,8 @@ class CCICalculate(object):
 # 分析类
 class CCIAnalyze(object):
 
-    def __init__(self, file_path_prefix, cci_path_prefix, code=None, n=14, end_date='0000-00-00'):
+    def __init__(self, file_path_prefix, code=None, n=14, end_date='0000-00-00'):
         self.file_path_prefix = file_path_prefix        # 日线数据文件目录前缀
-        self.cci_path_prefix = cci_path_prefix          # cci数据文件前缀
         self.code = code                                # 股票代码 （可选）
         self.n = n                                      # 公式中的天数， 默认14
         self.end_date = end_date                        # 最早的日期， 默认无下限
@@ -140,7 +139,6 @@ class CCIAnalyze(object):
             start += 1
         df.to_csv(self.file_path_prefix + str(self.code) + '.csv', index=False, encoding='gbk')
 
-
     def save_to_mysql(self):
         # 连接数据库
         name = "root"
@@ -149,14 +147,14 @@ class CCIAnalyze(object):
         cursor = db.cursor()
         cursor.execute('use shares')
 
-        file_list = os.listdir(self.cci_path_prefix)
+        file_list = os.listdir(self.file_path_prefix)
         # 遍历保存的csv文件
         print('正在储存至mysql')
         for index in tqdm(range(len(file_list))):
             filename = file_list[index]     # 取出文件名
             code = filename[0:6]
             try:
-                df = pd.read_csv(self.cci_path_prefix + filename, encoding='gbk')
+                df = pd.read_csv(self.file_path_prefix + filename, encoding='gbk')
             except:
                 print('文件'+str(code) + '.csv 打开失败')
                 return False
@@ -165,10 +163,9 @@ class CCIAnalyze(object):
                 cursor.execute("alter table %s add `cci` varchar(20)" % tb_name)
             except:
                 pass
-            rows = df.values[:]
-            for row in rows:
+            for index, row in df.iterrows():
                 try:
-                    sqltxt = "UPDATE %s SET `cci` = %s WHERE `日期` = '%s'" % (tb_name, row[2], row[0])
+                    sqltxt = "UPDATE %s SET `cci` = %s WHERE `日期` = '%s'" % (tb_name, row['cci'], row['日期'])
                     cursor.execute(sqltxt)
                 except:
                     pass
@@ -182,12 +179,12 @@ class CCIAnalyze(object):
             < -100 ， 后一天买入， > 100 后一天卖出
         '''
         print("正在测试购买")
-        file_list = os.listdir(self.cci_path_prefix)
+        file_list = os.listdir(self.file_path_prefix)
         for index in tqdm(range(len(file_list))):
             filename = file_list[index]     # 取出文件名
             code = filename[0:6]
             try:
-                df = pd.read_csv(self.cci_path_prefix + filename, encoding='gbk')
+                df = pd.read_csv(self.file_path_prefix + filename, encoding='gbk')
             except:
                 print('文件'+str(code) + '.csv 打开失败')
                 return False
@@ -229,12 +226,12 @@ class CCIAnalyze(object):
         '''
         # 在达到 <-100 的峰值的后一天买入， > 100 峰值的后一天卖出
         '''
-        file_list = os.listdir(self.cci_path_prefix)
+        file_list = os.listdir(self.file_path_prefix)
         for index in tqdm(range(len(file_list))):
             filename = file_list[index]     # 取出文件名
             code = filename[0:6]
             try:
-                df = pd.read_csv(self.cci_path_prefix + filename, encoding='gbk')
+                df = pd.read_csv(self.file_path_prefix + filename, encoding='gbk')
             except:
                 print('文件'+str(code) + '.csv 打开失败')
                 return False
@@ -286,10 +283,9 @@ class CCIAnalyze(object):
 
 if __name__ == '__main__':
     file_path_prefix = 'F:\\files\\sharesDatas\\kline\\'
-    cci_path_prefix = 'F:\\files\\sharesDatas\\cci\\'
     code = '000001'
     end_date = '2017-01-01'
-    cci_analyze = CCIAnalyze(file_path_prefix, cci_path_prefix=cci_path_prefix, end_date=end_date, code=code)
+    cci_analyze = CCIAnalyze(file_path_prefix, end_date=end_date, code=code)
 
     cci_analyze.analyze_all()
     # for cci in ccis['ccis'][::-1]:
