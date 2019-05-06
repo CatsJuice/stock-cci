@@ -115,6 +115,46 @@ class CCIAnalyze(object):
         # 截取 self.n 行, 默认从第0行开始
         start = 0
 
+        # 截取第一个数据块， 保存 data 数组
+        # datas = [{}]
+        # rows = rows = df[0:self.n-1]
+        # # 数据不足  或  日期已小于截止日期
+        # if len(rows) < self.n or rows.values[0][0] < self.end_date:
+        #     return None
+        # flag = True     # 标记数据是否完整
+        # for index, row in rows.iterrows():
+        #     if row['最高价'] == 'None' or row['最高价'] == 0 or row['最低价'] == 'None' \
+        #         or row['最低价'] == 0 or row['收盘价'] == 'None' or row['收盘价'] == 0:
+        #         flag = False
+        #     datas.append({'high':row['最高价'], 'low': row['最低价'], 'close': row['收盘价']})
+        # if not flag:
+        #     return None
+        # while True:
+        #     flag = True
+        #     datas.pop(0)
+        #     try:
+        #         high, low, close = df.loc[start, '最高价'], df.loc[start, '最低价'], df.loc[start, '收盘价']
+        #     except:
+        #         break
+        #     if high == 'None' or high == '0' \
+        #         or low == 'None' or low == '0' \
+        #         or close == 'None' or close == '0':
+        #         flag = False
+        #     new_line = {
+        #         'high':  high,
+        #         'low': low,
+        #         'close': close
+        #     }
+        #     if flag:
+        #         datas.append(new_line)
+        #         cci_calculate = CCICalculate(datas)
+        #         cci = cci_calculate.get_cci()
+        #     else:
+        #         cci = 0
+        #     df.loc[start, 'cci'] = cci
+        #     start += 1
+
+        
         # 每 n 行为一个块， 每次进一行
         while True:
             # 截取 start ~ start + n
@@ -138,6 +178,7 @@ class CCIAnalyze(object):
             df.loc[start, 'cci'] = cci
             start += 1
         df.to_csv(self.file_path_prefix + str(self.code) + '.csv', index=False, encoding='gbk')
+        
 
     def save_to_mysql(self):
         # 连接数据库
@@ -282,7 +323,8 @@ class CCIAnalyze(object):
 
 
 if __name__ == '__main__':
-    file_path_prefix = 'F:\\files\\sharesDatas\\kline\\'
+    file_path_prefix = 'H:\\sharesDatas\\kline\\'
+    # file_path_prefix = 'F:\\files\\sharesDatas\\kline\\'
     code = '000001'
     end_date = '2017-01-01'
     cci_analyze = CCIAnalyze(file_path_prefix, end_date=end_date, code=code)
